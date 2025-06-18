@@ -1,0 +1,29 @@
+body {
+    font-family: sans-serif;
+    padding: 2rem;
+    background: #f9f9f9;
+}
+  
+.container {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    max-width: 500px;
+    margin: auto;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+  
+input, button {
+    display: block;
+    width: 100%;
+    margin: 0.5rem 0 1rem;
+    padding: 0.5rem;
+}
+  
+button {
+    background-color: #0066ff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
