@@ -1,61 +1,66 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import sqlite3
+from datetime import datetime
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
+# Google Sheets setup
+SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+CREDS_FILE = "credentials.json"  
+SPREADSHEET_TITLE = "QR Code Links"  
+WORKSHEET_NAME = "Sheet1"
 
-DB_FILE = "qrdata.db"
-
-# Create DB and table if it doesn't exist
-def init_db():
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS qr_codes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            asn TEXT NOT NULL,
-            affiliate TEXT NOT NULL,
-            client TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    conn.commit()
-    conn.close()
+credentials = ServiceAccountCredentials.from_json_keyfile_name(CREDS_FILE, SCOPE)
+client = gspread.authorize(credentials)
+sheet = client.open(SPREADSHEET_TITLE).worksheet(WORKSHEET_NAME)
 
 @app.route("/api/save", methods=["POST"])
 def save_data():
     try:
         data = request.get_json()
-        print("📦 Received data:", data)
-
-        if not data:
-            return jsonify({"error": "No JSON received"}), 400
-
         asn = data.get("asn")
         affiliate = data.get("affiliate")
-        client = data.get("client")
+        client_short = data.get("client")
 
-        if not all([asn, affiliate, client]):
+        if not all([asn, affiliate, client_short]):
             return jsonify({"error": "Missing required fields"}), 400
 
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO qr_codes (asn, affiliate, client) VALUES (?, ?, ?)",
-                       (asn, affiliate, client))
-        conn.commit()
-        conn.close()
+        timestamp = datetime.utcnow().isoformat()
+        sheet.append_row([asn, affiliate, client_short, timestamp])
 
-        print("✅ Data saved to database")
+        print("✅ Data saved to Google Sheet")
         return jsonify({"success": True}), 200
 
     except Exception as e:
-        print("❌ Server error:", e)
+        print("❌ Error saving to Google Sheet:", e)
         return jsonify({"error": str(e)}), 500
 
-if __name__ == "__main__":
-    init_db()
-    print("🔥 Flask is starting...")
-    app.run(debug=True, port=5050)
+from flask import jsonify
 
+@app.get("/")
+def index():
+    return "QR backend is running", 200
+
+@app.get("/health")
+def health():
+    return jsonify(status="ok"), 200
+
+from flask import Flask, request, jsonify  # you already have this import
+# ...
+
+@app.get("/")
+def index():
+    return "QR backend is running", 200
+
+@app.get("/health")
+def health():
+    return jsonify(status="ok"), 200
+
+
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 5050))
+    app.run(host="0.0.0.0", port=port, debug=False)
