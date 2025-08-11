@@ -66,3 +66,21 @@ document.getElementById('download-btn').addEventListener('click', () => {
     window.currentQRCode.download({ name: filename, extension: "png" });
   }
 });
+
+function extractNamesFromASNUrl(url) {
+  try {
+    const parsedUrl = new URL(url);
+
+    // Extract client short name from the URL path
+    const pathSegments = parsedUrl.pathname.split('/');
+    const clientShortName = pathSegments[3]; // '/embeds/book/{client}/...'
+
+    // Extract affiliate short name from the 'asn' query parameter
+    const affiliateShortName = parsedUrl.searchParams.get('asn'); // full value like 'charischang-gbp'
+
+    return { clientShortName, affiliateShortName };
+  } catch (e) {
+    console.error('Invalid URL format', e);
+    return { clientShortName: null, affiliateShortName: null };
+  }
+}
