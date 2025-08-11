@@ -1,0 +1,11 @@
+{
+    "manifest_version": 3,
+    "name": "FareHarbor QR Code Generator",
+    "version": "1.0",
+    "description": "Generate QR codes from FareHarbor ASN links.",
+    "permissions": ["storage"],
+    "host_permissions": ["http://localhost:5050/"],
+    "action": {
+      "default_popup": "popup.html"
+    }
+}  
