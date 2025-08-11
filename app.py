@@ -51,15 +51,6 @@ def health():
 from flask import Flask, request, jsonify  # you already have this import
 # ...
 
-@app.get("/")
-def index():
-    return "QR backend is running", 200
-
-@app.get("/health")
-def health():
-    return jsonify(status="ok"), 200
-
-
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 5050))
