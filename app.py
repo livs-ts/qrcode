@@ -1,44 +1,52 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
+import traceback
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
-# Google Sheets setup
+# --- Google Sheets config ---
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-CREDS_FILE = "credentials.json"  
-SPREADSHEET_TITLE = "QR Code Links"  
-WORKSHEET_NAME = "Sheet1"
+CREDS_FILE = "credentials.json"  # Make sure this exists on Render
 
+SHEET_ID = "1nF_L4iCsf5IBz8XnxcJAqLa9kWN6hgsFrfBMhL5oEC0"  # Your sheet ID
+SHEET_TAB = "Sheet1"  # Tab name exactly as in the sheet
+
+# Google Sheets client
 credentials = ServiceAccountCredentials.from_json_keyfile_name(CREDS_FILE, SCOPE)
-client = gspread.authorize(credentials)
-sheet = client.open(SPREADSHEET_TITLE).worksheet(WORKSHEET_NAME)
+gclient = gspread.authorize(credentials)
 
-@app.route("/api/save", methods=["POST"])
+def get_ws():
+    """Return the worksheet handle by sheet ID and tab name."""
+    return gclient.open_by_key(SHEET_ID).worksheet(SHEET_TAB)
+
+@app.post("/api/save")
 def save_data():
     try:
-        data = request.get_json()
+        data = request.get_json(force=True) or {}
+        print("📦 Received data:", data)
+
         asn = data.get("asn")
         affiliate = data.get("affiliate")
         client_short = data.get("client")
 
         if not all([asn, affiliate, client_short]):
-            return jsonify({"error": "Missing required fields"}), 400
+            return jsonify(error="Missing required fields"), 400
 
+        ws = get_ws()
         timestamp = datetime.utcnow().isoformat()
-        sheet.append_row([asn, affiliate, client_short, timestamp])
+        ws.append_row([asn, affiliate, client_short, timestamp])
 
-        print("✅ Data saved to Google Sheet")
-        return jsonify({"success": True}), 200
+        print("✅ Appended to Google Sheet")
+        return jsonify(success=True), 200
 
     except Exception as e:
         print("❌ Error saving to Google Sheet:", e)
-        return jsonify({"error": str(e)}), 500
-
-from flask import jsonify
+        traceback.print_exc()
+        return jsonify(error=str(e)), 500
 
 @app.get("/")
 def index():
@@ -46,10 +54,8 @@ def index():
 
 @app.get("/health")
 def health():
-    return jsonify(status="ok"), 200
-
-from flask import Flask, request, jsonify  # you already have this import
-# ...
+    # Confirm which sheet we're using
+    return jsonify(status="ok", sheet_id=SHEET_ID, sheet_tab=SHEET_TAB), 200
 
 if __name__ == "__main__":
     import os
